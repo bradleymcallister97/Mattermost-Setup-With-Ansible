@@ -1,0 +1,38 @@
+---
+
+####################################################
+# Most common configuration options:
+####################################################
+mattermost_domain: <domain name>
+db_master_pass: "<db master password>"
+aws_pubkey_name: "<key pair name that you created>"
+
+####################################################
+# EC2 + RDS
+####################################################
+aws_region: us-east-1
+security_group_id: "basic-web-1"
+web_security_group_name: "ansible-web-secgroup"
+db_security_group_name: "ansible-db-secgroup"
+
+web_instance_count: 1
+web_ami_id: "ami-40d28157"
+
+db_master_name: "mattermost-db"
+db_master_user: "mmuser"
+database_name: "mattermost"
+
+db_ssl_mode: require
+
+####################################################
+# System
+####################################################
+mattermost_sysuser: "mattermost"
+mattermost_directory: /home/{{ mattermost_sysuser }}/mattermost_app
+
+
+####################################################
+# Web
+####################################################
+LATEST_MM_VERSION: "3.4.0"
+LATEST_MM_URL: https://releases.mattermost.com/{{ LATEST_MM_VERSION }}/mattermost-team-{{ LATEST_MM_VERSION }}-linux-amd64.tar.gz

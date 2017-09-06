@@ -1,0 +1,122 @@
+---
+
+- name: Provision EC2 and RDS infrastructure
+  hosts: localhost
+  connection: local
+  gather_facts: False
+
+  tasks:
+    - name: Create a basic web security group (TCP 22, 80, 433 IN)
+      ec2_group:
+        name: "{{ web_security_group_name }}"
+        description: A basic web security group that allows 22, 80, 433 inbound
+        region: "{{ aws_region }}"
+        rules:
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 22
+            to_port: 22
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: 0.0.0.0/0
+        rules_egress:
+          - proto: all
+            from_port: all
+            to_port: all
+            cidr_ip: 0.0.0.0/0
+      register: web_secgroup
+    
+    - name: Web Security Group
+      debug: msg="{{ web_secgroup }}"
+    
+    - name: Create a basic database security group (TCP 5432 IN)
+      ec2_group:
+        name: "{{ db_security_group_name }}"
+        description: A security group that allows database connections to postgres
+        region: "{{ aws_region }}"
+        rules:
+          - proto: tcp
+            from_port: 5432
+            to_port: 5432
+            cidr_ip: 0.0.0.0/0
+        rules_egress:
+          - proto: all
+            from_port: all
+            to_port: all
+            cidr_ip: 0.0.0.0/0
+      register: db_secgroup
+
+    - name: DB Security Group
+      debug: msg="{{ db_secgroup }}"
+    
+    - set_fact: db_security_group_id="{{ db_secgroup['group_id'] }}"
+
+    - name: Provision a database instance
+      rds:
+        command: create
+        db_name: "{{ database_name }}"
+        instance_name: "{{ db_master_name }}"
+        vpc_security_groups: "{{ db_security_group_id }}"
+        db_engine: postgres
+        size: 10
+        instance_type: db.t2.micro
+        region: "{{ aws_region }}"
+        username: "{{ db_master_user }}"
+        password: "{{ db_master_pass }}"
+        tags:
+          Environment: prod
+          Application: mattermost
+      register: rdsmachines
+
+    - pause: prompt="Now you'll need to wait for your RDS instance to come up on AWS console before hitting ENTER to continue this Ansible playbook"
+    
+    - debug: var=rdsmachines verbosity=1
+    - set_fact: db_server="{{ rdsmachines['instance']['endpoint'] }}"
+
+    - name: Save our RDS servername to a local file.
+      local_action: copy content={{ db_server }} dest=group_vars/rdsname
+
+    - debug: var=db_server verbosity=1
+
+    - name: Provision a set of web instances
+      ec2:
+        region: "{{ aws_region }}"
+        group: "{{ web_security_group_name }}"
+        key_name: "{{ aws_pubkey_name }}"
+        instance_type: t2.micro
+        image: "{{ web_ami_id }}"
+        wait: true
+        exact_count: "{{ web_instance_count }}"
+        count_tag:
+          Name: Mattermost
+        instance_tags:
+          Name: mattermost-web
+          Environment: prod
+          Application: mattermost
+      register: ec2
+    
+    - name: Add all web instance IPs to host group
+      add_host: hostname={{ item.public_ip }} groupname=webservers
+      with_items: '{{ ec2.instances }}'
+
+    - name: Wait for SSH to come up
+      wait_for: host={{ item.public_dns_name }} port=22 delay=60 timeout=320 state=started
+      with_items: '{{ ec2.instances }}'
+
+- hosts: webservers
+  name: Webserver Setup
+  remote_user: ubuntu
+  become: yes
+  become_method: sudo
+  become_user: root
+  gather_facts: false
+  roles:
+    - bootstrap
+    - common
+    - web
+
