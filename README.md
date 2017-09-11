@@ -1,5 +1,19 @@
 # Mattermost-Setup-With-Ansible
 
+## Why
+After looking for automation tools found Ansible, so decided to teach myself how to use Ansible. This is one of the scripts I created.
+
+## What
+This script will instantiate:
+- RDS instance with postgres installed
+- EC2 instance
+    - connect to the RDS 
+    - install and setup Nginx
+    - install and configure Mattermost
+    
+Once script is done the EC2 instance will be hosting your personal Mattermost site. Mattermost is like Slack.
+
+## How to Run
 __Was ran and tested with Ansible 2.4__
 
 1. In order to be able to run the playbook you must have:
