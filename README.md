@@ -20,7 +20,7 @@ __Was run and tested with Ansible 2.4__
     - An AWS user with programmatic access
     - An AWS key pair set up with your machine’s personal ssh key, [instructions](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html#how-to-generate-your-own-key-and-import-it-to-aws)
 
-2. Update the file `group_vars/all` to contain the correct variable names, this is the file that contains all of the global varaibles that the script will use.
+2. Update the file `group_vars/all` to contain the correct variable names, this is the file that contains all of the global variables that the script will use.
 
 3. Run playbook with command:
 `AWS_ACCESS_KEY_ID='<Your access key id>' AWS_SECRET_ACCESS_KEY='<Your secret access key>' ansible-playbook provision-aws-mattermost.yml`
